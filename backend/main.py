@@ -3,6 +3,10 @@ from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List
+import warnings
+
+# Suppress wikipedia parser warning
+warnings.filterwarnings("ignore", module="wikipedia")
 
 from search import search_wikipedia, load_kb
 from rag import rag_pipeline, run_llm_stream
