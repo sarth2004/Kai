@@ -1,0 +1,7 @@
+A Python function is defined using def.
+
+Example:
+def greet(name):
+    print("Hello", name)
+
+Source: Python official documentation
