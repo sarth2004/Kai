@@ -90,8 +90,10 @@
             color: #c4c7c5;
         }
 
-        .chat-item:hover {
+        .chat-item:hover,
+        .chat-item.active {
             background-color: #282932;
+            color: var(--accent-color);
         }
 
         /* Logo */
@@ -331,6 +333,13 @@
 
         const chatHistory = document.getElementById('chat-history');
         const promptInput = document.getElementById('prompt');
+        const recentChatsContainer = document.querySelector('.recent-chats');
+        let currentConversationId = null;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadConversations();
+        });
 
         function autoResize(textarea) {
             textarea.style.height = 'auto';
@@ -349,6 +358,7 @@
         }
 
         function startNewChat() {
+            currentConversationId = null;
             chatHistory.innerHTML = `
                 <div class="message ai">
                     <div class="avatar ai">K</div>
@@ -358,6 +368,82 @@
                 </div>
             `;
             promptInput.value = '';
+
+            // Remove active class from sidebar items
+            document.querySelectorAll('.chat-item').forEach(el => el.classList.remove('active'));
+        }
+
+        async function loadConversations() {
+            try {
+                const res = await fetch("http://127.0.0.1:8000/conversations");
+                const conversations = await res.json();
+
+                // Clear existing list except label
+                recentChatsContainer.innerHTML = '<div class="recent-label">Recent</div>';
+
+                conversations.forEach(conv => {
+                    const div = document.createElement('div');
+                    div.className = 'chat-item';
+                    div.innerText = conv.title;
+                    div.onclick = () => loadChat(conv.id);
+                    if (conv.id === currentConversationId) {
+                        div.classList.add('active');
+                    }
+                    recentChatsContainer.appendChild(div);
+                });
+            } catch (e) {
+                console.error("Failed to load conversations:", e);
+            }
+        }
+
+        async function loadChat(id) {
+            try {
+                const res = await fetch(`http://127.0.0.1:8000/conversations/${id}`);
+                const data = await res.json();
+
+                currentConversationId = id;
+                chatHistory.innerHTML = ''; // Clear current view
+
+                // Render messages
+                data.messages.forEach(msg => {
+                    // Check existence of ID to prevent duplicates if any logic was weird, 
+                    // generally we just rebuild
+                    // But we use 'user' and 'ai' roles suitable for addMessage
+                    // However, addMessage renders markdown for AI. The content from DB is markdown.
+                    // So we can reuse addMessage logic but we need to bypass "Thinking..."
+                    renderMessage(msg.role, msg.content);
+                });
+
+                scrollToBottom();
+
+                // Update Sidebar Selection
+                loadConversations(); // Re-render to highlight active one
+
+            } catch (e) {
+                console.error("Failed to load chat:", e);
+            }
+        }
+
+        function renderMessage(role, text) {
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `message ${role}`;
+
+            const avatar = document.createElement('div');
+            avatar.className = `avatar ${role}`;
+            avatar.innerText = role === 'user' ? 'U' : 'K';
+
+            const bubble = document.createElement('div');
+            bubble.className = 'bubble';
+
+            if (role === 'user') {
+                bubble.innerText = text;
+            } else {
+                bubble.innerHTML = marked.parse(text);
+            }
+
+            msgDiv.appendChild(avatar);
+            msgDiv.appendChild(bubble);
+            chatHistory.appendChild(msgDiv);
         }
 
         async function askAI() {
@@ -378,8 +464,19 @@
                 const res = await fetch("http://127.0.0.1:8000/ask", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ question: question })
+                    body: JSON.stringify({
+                        question: question,
+                        conversation_id: currentConversationId
+                    })
                 });
+
+                // Check for Conversation ID in header
+                const newConvId = res.headers.get("X-Conversation-ID");
+                if (newConvId && !currentConversationId) {
+                    currentConversationId = newConvId;
+                    // Refresh sidebar to show new chat
+                    loadConversations();
+                }
 
                 const reader = res.body.getReader();
                 const decoder = new TextDecoder();
@@ -429,5 +526,6 @@
         }
     </script>
 </body>
+
 
 </html>
