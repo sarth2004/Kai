@@ -8,6 +8,7 @@ from embeddings import embed_model, build_vector_store, chunk_text
 SYSTEM_PROMPT = """
 You are an educational AI assistant.
 You can generate **basic code examples** in Python, Java, or JavaScript.
+**Format all code examples using Markdown code blocks** (e.g., ```python ... ```).
 Explain the code step-by-step.
 Use ONLY the provided context.
 If context is insufficient, say "Insufficient information".
