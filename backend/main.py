@@ -63,6 +63,13 @@ async def create_new_conversation(data: dict):
     cid = await database.create_conversation(title)
     return await database.get_conversation(cid)
 
+@app.delete("/conversations/{conversation_id}")
+async def delete_conversation(conversation_id: str):
+    success = await database.delete_conversation(conversation_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Conversation not found or could not be deleted")
+    return {"status": "success", "id": conversation_id}
+
 @app.post("/ask")
 async def ask_ai(query: Query):
     print(f"DEBUG: Received question: {query.question}, conversation_id: {query.conversation_id}")

@@ -84,16 +84,72 @@
             cursor: pointer;
             border-radius: 5px;
             font-size: 14px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            /* Remove overflow hidden from container so dropdown shows */
+            /* white-space: nowrap; - handled by flex child */
             color: #c4c7c5;
+            position: relative;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
         .chat-item:hover,
         .chat-item.active {
             background-color: #282932;
             color: var(--accent-color);
+        }
+
+        .chat-item .menu-btn {
+            opacity: 0;
+            background: none;
+            border: none;
+            color: inherit;
+            cursor: pointer;
+            padding: 2px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+        }
+
+        .chat-item:hover .menu-btn,
+        .chat-item.active .menu-btn {
+            opacity: 1;
+        }
+
+        .chat-item .menu-btn:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Dropdown */
+        .dropdown-menu {
+            position: absolute;
+            right: 0px;
+            top: 100%;
+            background-color: #2d2e35;
+            border: 1px solid #444;
+            border-radius: 5px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            z-index: 100;
+            display: none;
+            min-width: 100px;
+        }
+
+        .dropdown-menu.show {
+            display: block;
+            animation: fadeIn 0.1s;
+        }
+
+        .dropdown-item {
+            padding: 8px 12px;
+            cursor: pointer;
+            color: #e3e3e3;
+            font-size: 13px;
+        }
+
+        .dropdown-item:hover {
+            background-color: #3e3f4b;
+            color: #ff6b6b;
+            /* Red for delete */
         }
 
         /* Logo */
@@ -384,15 +440,91 @@
                 conversations.forEach(conv => {
                     const div = document.createElement('div');
                     div.className = 'chat-item';
-                    div.innerText = conv.title;
-                    div.onclick = () => loadChat(conv.id);
                     if (conv.id === currentConversationId) {
                         div.classList.add('active');
                     }
+                    div.onclick = (e) => {
+                        // Prevent loading chat if clicking menu
+                        if (e.target.closest('.menu-btn') || e.target.closest('.dropdown-menu')) return;
+                        loadChat(conv.id);
+                    };
+
+                    // Title span
+                    const titleSpan = document.createElement('span');
+                    titleSpan.innerText = conv.title;
+                    titleSpan.style.flexGrow = '1';
+                    titleSpan.style.overflow = 'hidden';
+                    titleSpan.style.textOverflow = 'ellipsis';
+                    div.appendChild(titleSpan);
+
+                    // Menu Button (Three dots)
+                    const menuBtn = document.createElement('button');
+                    menuBtn.className = 'menu-btn';
+                    menuBtn.innerHTML = `
+                         <svg viewBox="0 0 24 24" width="16" height="16">
+                            <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+                        </svg>
+                    `;
+
+                    // Dropdown
+                    const dropdown = document.createElement('div');
+                    dropdown.className = 'dropdown-menu';
+                    dropdown.innerHTML = `<div class="dropdown-item" onclick="deleteConversation('${conv.id}')">Delete</div>`;
+
+                    menuBtn.onclick = (e) => {
+                        e.stopPropagation();
+                        // Close other dropdowns
+                        document.querySelectorAll('.dropdown-menu').forEach(el => {
+                            if (el !== dropdown) el.classList.remove('show');
+                        });
+                        dropdown.classList.toggle('show');
+                    };
+
+                    div.appendChild(menuBtn);
+                    div.appendChild(dropdown);
+
                     recentChatsContainer.appendChild(div);
                 });
+
+                // Global click to close dropdowns
+                document.addEventListener('click', (e) => {
+                    if (!e.target.closest('.menu-btn')) {
+                        document.querySelectorAll('.dropdown-menu').forEach(el => el.classList.remove('show'));
+                    }
+                }, { once: true }); // Adding multiple listeners is bad, fix below
+
             } catch (e) {
                 console.error("Failed to load conversations:", e);
+            }
+        }
+
+        // Better global listener (outside function)
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.menu-btn')) {
+                document.querySelectorAll('.dropdown-menu').forEach(el => el.classList.remove('show'));
+            }
+        });
+
+        async function deleteConversation(id) {
+            if (!confirm("Delete this chat?")) return;
+
+            try {
+                const res = await fetch(`http://127.0.0.1:8000/conversations/${id}`, {
+                    method: 'DELETE'
+                });
+
+                if (res.ok) {
+                    // Refresh list
+                    loadConversations();
+                    // If deleted current chat, reset view
+                    if (id === currentConversationId) {
+                        startNewChat();
+                    }
+                } else {
+                    alert("Failed to delete chat");
+                }
+            } catch (e) {
+                console.error("Error deleting chat:", e);
             }
         }
 

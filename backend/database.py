@@ -69,3 +69,14 @@ async def get_conversation(conversation_id: str) -> Optional[Dict]:
     except:
         return None
     return None
+
+async def delete_conversation(conversation_id: str) -> bool:
+    try:
+        # Delete messages first
+        await db.messages.delete_many({"conversation_id": conversation_id})
+        # Delete conversation
+        result = await db.conversations.delete_one({"_id": ObjectId(conversation_id)})
+        return result.deleted_count > 0
+    except Exception as e:
+        print(f"ERROR: Failed to delete conversation {conversation_id}: {e}")
+        return False
