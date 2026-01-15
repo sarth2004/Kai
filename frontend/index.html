@@ -1,101 +1,324 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
-    <title>KAI</title>
+    <meta charset="UTF-8">
+    <title>Kai AI</title>
+    <!-- Highlight.js & Marked.js -->
     <link rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark-reasonable.min.css">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+
+    <!-- Icons (optional, using unicode for now) -->
+
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #1e1e1e;
-            color: #d4d4d4;
-            padding: 40px;
-            max-width: 800px;
-            margin: auto;
+        :root {
+            --bg-color: #131314;
+            --sidebar-color: #1e1e20;
+            --text-color: #e3e3e3;
+            --user-bubble-bg: #282a2c;
+            --accent-color: #a8c7fa;
+            --input-bg: #1e1e20;
         }
 
-        h2 {
-            text-align: center;
-            color: #61dafb;
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* Sidebar */
+        aside.sidebar {
+            width: 260px;
+            background-color: var(--sidebar-color);
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            border-right: 1px solid #333;
+        }
+
+        .new-chat-btn {
+            background-color: #282932;
+            color: #bdc1c6;
+            border: 1px solid transparent;
+            padding: 10px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            text-align: left;
+            font-size: 14px;
+            margin-bottom: 20px;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .new-chat-btn:hover {
+            background-color: #333537;
+        }
+
+        .recent-chats {
+            flex-grow: 1;
+            overflow-y: auto;
+        }
+
+        .recent-label {
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #8e8e8e;
+        }
+
+        .chat-item {
+            padding: 10px;
+            cursor: pointer;
+            border-radius: 5px;
+            font-size: 14px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: #c4c7c5;
+        }
+
+        .chat-item:hover {
+            background-color: #282932;
+        }
+
+        /* Logo */
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--text-color);
+            margin-bottom: 20px;
+            padding-left: 5px;
+            letter-spacing: 1px;
+            background: linear-gradient(135deg, #4285f4, #9b72cb, #d96570);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Main Chat Area */
+        main.chat-interface {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .chat-history {
+            flex-grow: 1;
+            padding: 40px;
+            overflow-y: auto;
+            scroll-behavior: smooth;
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+            max-width: 900px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .message {
+            display: flex;
+            gap: 20px;
+            line-height: 1.6;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.user {
+            flex-direction: row-reverse;
+        }
+
+        .avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background-color: #a8c7fa;
+            color: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .avatar.ai {
+            background: linear-gradient(135deg, #4285f4, #9b72cb, #d96570);
+            color: white;
+        }
+
+        .bubble {
+            padding: 0 10px;
+            max-width: 80%;
+            word-wrap: break-word;
+            /* Ensure long words wrap */
+        }
+
+        .message.user .bubble {
+            background-color: var(--user-bubble-bg);
+            padding: 12px 18px;
+            border-radius: 20px 2px 20px 20px;
+        }
+
+        .message.ai .bubble {
+            width: 100%;
+            /* Markdown content handles its own spacing */
+        }
+
+        /* Markdown Styles & Highlighting overrides */
+        .bubble pre {
+            background: #1e1e1e;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            border: 1px solid #333;
+            margin: 10px 0;
+        }
+
+        .bubble code {
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.9em;
+        }
+
+        .bubble p {
+            margin-bottom: 10px;
+        }
+
+        .bubble ul,
+        .bubble ol {
+            margin-left: 20px;
+            margin-bottom: 10px;
+        }
+
+        /* Input Area */
+        .input-area {
+            background-color: var(--bg-color);
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .input-container {
+            width: 100%;
+            max-width: 800px;
+            position: relative;
+            background-color: var(--input-bg);
+            border-radius: 25px;
+            border: 1px solid #444;
+        }
+
+        .input-container:focus-within {
+            background-color: #282932;
+            border-color: #555;
         }
 
         textarea {
             width: 100%;
-            height: 100px;
-            background: #252526;
-            color: #fff;
-            border: 1px solid #3e3e42;
-            padding: 10px;
-            border-radius: 5px;
-            font-size: 16px;
-        }
-
-        button {
-            padding: 10px 20px;
-            margin-top: 10px;
-            background: #007acc;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-        }
-
-        button:hover {
-            background: #005f9e;
-        }
-
-        #response {
-            background: #252526;
-            padding: 20px;
-            margin-top: 20px;
-            border-radius: 5px;
-            white-space: pre-wrap;
-            /* Keeps formatting but allows wrapping */
-            line-height: 1.6;
-        }
-
-        /* Markdown Styles */
-        #response pre {
-            background: #1e1e1e;
-            padding: 15px;
-            border-radius: 5px;
-            overflow-x: auto;
-        }
-
-        #response code {
-            font-family: 'Consolas', 'Monaco', monospace;
-            background: #333;
-            padding: 2px 4px;
-            border-radius: 3px;
-        }
-
-        #response pre code {
             background: transparent;
-            padding: 0;
+            border: none;
+            color: white;
+            padding: 15px 50px 15px 20px;
+            font-family: inherit;
+            font-size: 16px;
+            resize: none;
+            height: 56px;
+            /* Single line initially */
+            max-height: 200px;
+            overflow-y: hidden;
+            outline: none;
+            border-radius: 25px;
         }
 
-        a {
-            color: #61dafb;
+        .send-btn {
+            position: absolute;
+            right: 15px;
+            bottom: 10px;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            color: #e3e3e3;
+            opacity: 0.7;
+        }
+
+        .send-btn:hover {
+            opacity: 1;
+            color: var(--accent-color);
+        }
+
+        svg {
+            width: 24px;
+            height: 24px;
+            fill: currentColor;
         }
     </style>
 </head>
 
 <body>
 
-    <h2>KAI</h2>
+    <aside class="sidebar">
+        <div class="logo">KAI</div>
+        <button class="new-chat-btn" onclick="startNewChat()">
+            <span>+</span> New Chat
+        </button>
 
-    <textarea id="prompt" placeholder="Ask something (e.g., 'Python code for fibonacci sequence')..."></textarea>
-    <br>
-    <button onclick="askAI()">Ask</button>
+        <div class="recent-chats">
+            <div class="recent-label">Recent</div>
+            <div class="chat-item">Debugging Python</div>
+            <div class="chat-item">React Components</div>
+            <div class="chat-item">Explanation of RAG</div>
+        </div>
+    </aside>
 
-    <div id="response"></div>
+    <main class="chat-interface">
+        <div class="chat-history" id="chat-history">
+            <!-- Messages will appear here -->
+            <div class="message ai">
+                <div class="avatar ai">K</div>
+                <div class="bubble">
+                    <p>Hello, Sarthak! I'm Kai. How can I help you code today?</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="input-area">
+            <div class="input-container">
+                <textarea id="prompt" placeholder="Ask anything..." oninput="autoResize(this)"
+                    onkeydown="handleEnter(event)"></textarea>
+                <button class="send-btn" onclick="askAI()">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </main>
 
     <script>
-        // Configure marked to use highlight.js
+        // Setup Markdown with Highlight.js
         marked.setOptions({
             highlight: function (code, lang) {
                 if (lang && hljs.getLanguage(lang)) {
@@ -106,62 +329,105 @@
             breaks: true
         });
 
-        async function askAI() {
-            const prompt = document.getElementById("prompt").value;
-            const responseDiv = document.getElementById("response");
+        const chatHistory = document.getElementById('chat-history');
+        const promptInput = document.getElementById('prompt');
 
-            responseDiv.innerHTML = "<em>Thinking...</em>";
+        function autoResize(textarea) {
+            textarea.style.height = 'auto';
+            textarea.style.height = textarea.scrollHeight + 'px';
+        }
 
-            const res = await fetch("http://127.0.0.1:8000/ask", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ question: prompt })
-            });
-
-            responseDiv.innerHTML = ""; // Clear "Thinking..."
-            const reader = res.body.getReader();
-            const decoder = new TextDecoder();
-            let fullText = "";
-
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-
-                const chunk = decoder.decode(value, { stream: true });
-                fullText += chunk;
-
-                // Re-render markdown on every chunk
-                responseDiv.innerHTML = marked.parse(fullText);
+        function handleEnter(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                askAI();
             }
         }
-    </script>
 
+        function scrollToBottom() {
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
+
+        function startNewChat() {
+            chatHistory.innerHTML = `
+                <div class="message ai">
+                    <div class="avatar ai">K</div>
+                    <div class="bubble">
+                        <p>Hello! I'm ready for a new task. What's on your mind?</p>
+                    </div>
+                </div>
+            `;
+            promptInput.value = '';
+        }
+
+        async function askAI() {
+            const question = promptInput.value.trim();
+            if (!question) return;
+
+            // 1. Add User Message
+            addMessage('user', question);
+            promptInput.value = '';
+            promptInput.style.height = '56px'; // Reset height
+
+            // 2. Add AI Placeholder
+            const aiBubbleId = 'ai-' + Date.now();
+            addMessage('ai', 'Thinking...', aiBubbleId);
+
+            // 3. Fetch Stream
+            try {
+                const res = await fetch("http://127.0.0.1:8000/ask", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ question: question })
+                });
+
+                const reader = res.body.getReader();
+                const decoder = new TextDecoder();
+                let fullText = "";
+                const aiBubble = document.getElementById(aiBubbleId);
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    const chunk = decoder.decode(value, { stream: true });
+                    fullText += chunk;
+
+                    // Render Markdown
+                    aiBubble.innerHTML = marked.parse(fullText);
+                    scrollToBottom();
+                }
+
+            } catch (error) {
+                console.error(error);
+                document.getElementById(aiBubbleId).innerText = "Error: Could not reach backend.";
+            }
+        }
+
+        function addMessage(role, text, id = null) {
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `message ${role}`;
+
+            const avatar = document.createElement('div');
+            avatar.className = `avatar ${role}`;
+            avatar.innerText = role === 'user' ? 'U' : 'K';
+
+            const bubble = document.createElement('div');
+            bubble.className = 'bubble';
+            if (id) bubble.id = id;
+
+            if (role === 'user') {
+                bubble.innerText = text; // User text is plain
+            } else {
+                bubble.innerHTML = text; // AI text might be 'Thinking...' initially
+            }
+
+            msgDiv.appendChild(avatar);
+            msgDiv.appendChild(bubble);
+            chatHistory.appendChild(msgDiv);
+            scrollToBottom();
+        }
+    </script>
 </body>
 
 </html>
-
-<!-- <!DOCTYPE html>
-<html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <title>Educational AI Assistant</title>
-    <link rel="stylesheet" href="style.css">
-</head>
-
-<body>
-    <div class="container">
-        <h1>Educational AI Assistant</h1>
-
-        <textarea id="prompt" placeholder="Enter your question here">
-        </textarea>
-
-        <button onclick="askAI()">Ask AI</button>
-
-        <pre id="response"></pre>
-    </div>
-
-    <script src="script.js"></script>
-</body>
-
-</html> -->
