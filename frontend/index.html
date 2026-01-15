@@ -446,9 +446,34 @@
             chatHistory.appendChild(msgDiv);
         }
 
+        let isGenerating = false;
+        let abortController = null;
+        const sendBtn = document.querySelector('.send-btn');
+        const sendIcon = `
+            <svg viewBox="0 0 24 24">
+                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+            </svg>`;
+        const stopIcon = `
+            <svg viewBox="0 0 24 24">
+               <rect x="6" y="6" width="12" height="12" />
+            </svg>`;
+
         async function askAI() {
+            // If currently generating, stop it
+            if (isGenerating) {
+                if (abortController) abortController.abort();
+                isGenerating = false;
+                sendBtn.innerHTML = sendIcon;
+                return;
+            }
+
             const question = promptInput.value.trim();
             if (!question) return;
+
+            // Start Generation
+            isGenerating = true;
+            sendBtn.innerHTML = stopIcon;
+            abortController = new AbortController();
 
             // 1. Add User Message
             addMessage('user', question);
@@ -467,7 +492,8 @@
                     body: JSON.stringify({
                         question: question,
                         conversation_id: currentConversationId
-                    })
+                    }),
+                    signal: abortController.signal
                 });
 
                 // Check for Conversation ID in header
@@ -496,8 +522,17 @@
                 }
 
             } catch (error) {
-                console.error(error);
-                document.getElementById(aiBubbleId).innerText = "Error: Could not reach backend.";
+                if (error.name === 'AbortError') {
+                    console.log('Generation stopped by user');
+                    // Optional: Indicate stopped state in UI
+                } else {
+                    console.error(error);
+                    document.getElementById(aiBubbleId).innerText = "Error: " + error.message;
+                }
+            } finally {
+                isGenerating = false;
+                sendBtn.innerHTML = sendIcon;
+                abortController = null;
             }
         }
 
